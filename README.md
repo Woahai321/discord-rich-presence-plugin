@@ -19,22 +19,79 @@ Based on the [Navicord](https://github.com/logixism/navicord) project.
 - Multi-user support with individual Discord tokens
 - Optional image hosting via [uguu.se](https://uguu.se) for non-public Navidrome instances
 
-<img height="550" src="https://raw.githubusercontent.com/navidrome/discord-rich-presence-plugin/master/.github/screenshot.png">
+<img height="550" alt="Discord Rich Presence showing currently playing track with album art, artist, and playback progress" src="https://raw.githubusercontent.com/navidrome/discord-rich-presence-plugin/master/.github/screenshot.png">
 
 
 ## Installation
 
-1. Copy the `discord-rich-presence.ndp` file from the [releases page](https://github.com/navidrome/discord-rich-presence-plugin/releases) to your Navidrome plugins folder (default is `plugins/` under the Navidrome data directory).
-2. Configure the plugin in **Settings > Plugins > Discord Rich Presence**
-3. Enable the plugin
+### Step 1: Download and Install the Plugin
+1. Download the `discord-rich-presence.ndp` file from the [releases page](https://github.com/navidrome/discord-rich-presence-plugin/releases)
+2. Copy it to your Navidrome plugins folder. Default location: `<navidrome-data-directory>/plugins/`
 
-Important: Remember to configure your account in Discord to share activity status with others: 
-- Go to **User Settings > Activity Privacy**
-- Enable **Share my activity**
+### Step 2: Create a Discord Application
+1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+2. Click "New Application" and give it a name (e.g., "My Navidrome")
+3. Note down the **Application ID** (Client ID) - you'll need this for configuration
 
-There is no need to restart Navidrome; Check the logs for any errors during initialization.
+### Step 3: Get Your Discord User Token
+⚠️ **WARNING**: This step involves using your Discord user token, which may violate Discord's Terms of Service. Proceed at your own risk.
 
-Note: Currently album art can only be displayed if your Navidrome instance is public. Additionally you must set the ND_BASEURL config to your public facing URL. Once this is complete you will need to restart Navidrome for the change to take effect.
+We don't provide instructions for obtaining the token as it may violate Discord's policies. You can find guides online by searching for "how to get Discord user token".
+
+### Step 4: Configure the Plugin
+1. Open Navidrome and go to **Settings > Plugins > Discord Rich Presence**
+2. Fill in the configuration:
+   - **Client ID**: Your Discord Application ID from Step 2
+   - **Upload to uguu.se**: Enable this if your Navidrome isn't publicly accessible (see Album Art section below)
+   - **Users**: Add your Navidrome username and Discord token from Step 3
+
+### Step 5: Enable Discord Activity Sharing
+In Discord, ensure your activity is visible to others:
+1. Go to **User Settings** (gear icon)
+2. Navigate to **Activity Privacy**
+3. Enable **"Display current activity as a status message"**
+
+### Step 6: Enable the Plugin
+1. In Navidrome's plugin settings, toggle the plugin to **Enabled**
+2. No restart required - check Navidrome logs for any initialization errors
+
+## Album Art Display
+
+For album artwork to display in Discord, Discord needs to be able to access the image. Choose one of these options:
+
+### Decision Guide
+**Is your Navidrome accessible from the internet?**
+- ✅ **YES** → Use Option 1 (Public Instance)
+- ❌ **NO** (local network, VPN, private server) → Use Option 2 (uguu.se Upload)
+
+### Option 1: Public Navidrome Instance
+**Use this if**: Your Navidrome server can be reached from the internet
+
+**Setup**:
+1. Set the `ND_BASEURL` environment variable to your public URL:
+   ```bash
+   # Example for Docker or Docker Compose
+   ND_BASEURL=https://music.yourdomain.com
+   
+   # Example for navidrome.toml
+   BaseURL = "https://music.yourdomain.com"
+   ```
+2. **Restart Navidrome** (required for ND_BASEURL changes)
+3. In plugin settings: **Disable** "Upload to uguu.se"
+
+### Option 2: Private Instance with uguu.se Upload
+**Use this if**: Your Navidrome is only accessible locally (home network, behind VPN, etc.)
+
+**Setup**:
+1. In plugin settings: **Enable** "Upload to uguu.se"
+2. No other configuration needed
+
+**How it works**: Album art is automatically uploaded to uguu.se (temporary, anonymous hosting service) so Discord can access it. Files are deleted after 3 hours.
+
+### Troubleshooting Album Art
+- **No album art showing**: Check Navidrome logs for errors
+- **Using public instance**: Verify ND_BASEURL is correct and Navidrome was restarted
+- **Using uguu.se**: Check that the option is enabled and your server has internet access
 
 ## How It Works
 
@@ -99,21 +156,54 @@ Discord requires images to be registered via their external assets API. The plug
 
 ## Configuration
 
-Configure via the Navidrome UI under **Settings > Plugins > Discord Rich Presence**:
+Access the plugin configuration in Navidrome: **Settings > Plugins > Discord Rich Presence**
 
-| Field                 | Description                                                                                                     |
-|-----------------------|-----------------------------------------------------------------------------------------------------------------|
-| **Client ID**         | Your Discord Application ID (create at [Discord Developer Portal](https://discord.com/developers/applications)) |
-| **Upload to uguu.se** | Enable if your Navidrome instance isn't publicly accessible (uploads artwork to temporary file host)            |
-| **Users**             | Array of username/token pairs mapping Navidrome users to Discord tokens                                         |
+### Configuration Fields
+
+#### Client ID
+- **What it is**: Your Discord Application ID
+- **How to get it**: 
+  1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+  2. Create a new application or select an existing one
+  3. Copy the "Application ID" from the General Information page
+- **Example**: `1234567890123456789`
+
+#### Upload to uguu.se
+- **When to enable**: Your Navidrome instance is NOT publicly accessible from the internet
+- **What it does**: Automatically uploads album artwork to uguu.se (temporary hosting) so Discord can display it
+- **When to disable**: Your Navidrome is publicly accessible and you've set `ND_BASEURL`
+
+#### Users
+Add each Navidrome user who wants Discord Rich Presence:
+
+**Format**: Array of user objects with `username` and `token` fields
+
+**Example**:
+```json
+[
+  {
+    "username": "john",
+    "token": "your-discord-user-token-here"
+  },
+  {
+    "username": "jane", 
+    "token": "another-discord-user-token"
+  }
+]
+```
+
+**Important**: 
+- `username`: Your Navidrome login username (case-sensitive)
+- `token`: Your Discord user token (see installation instructions for how to obtain this)
 
 
 ## Building
 
-Although the plugin can be compiled to WebAssembly with standard Go, it is recommended to use
-[TinyGo](https://tinygo.org/getting-started/install/) for smaller binary size.
+### Prerequisites
+- **Recommended**: [TinyGo](https://tinygo.org/getting-started/install/) (produces smaller binary size)
+- **Alternative**: Standard Go 1.19+ (larger binary but easier setup)
 
-
+### Quick Build (Using Makefile)
 ```sh
 # Run tests
 make test
@@ -127,14 +217,22 @@ make package
 
 The `make package` command creates `discord-rich-presence.ndp` containing the compiled WebAssembly module and manifest.
 
-### Manual build:
+### Manual Build Options
+
+#### Using TinyGo (Recommended)
 ```sh
+# Install TinyGo first: https://tinygo.org/getting-started/install/
 tinygo build -target wasip1 -buildmode=c-shared -o plugin.wasm -scheduler=none .
 zip discord-rich-presence.ndp plugin.wasm manifest.json
 ```
 
-### Using standard Go:
+#### Using Standard Go
 ```sh
 GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o plugin.wasm .
 zip discord-rich-presence.ndp plugin.wasm manifest.json
 ```
+
+### Output
+- `plugin.wasm`: The compiled WebAssembly module
+- `discord-rich-presence.ndp`: The complete plugin package ready for installation
+
