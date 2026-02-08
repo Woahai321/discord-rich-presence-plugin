@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/navidrome/navidrome/refs/heads/master/plugins/manifest-schema.json",
   "name": "Discord Rich Presence",
   "author": "Navidrome Team",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "Discord Rich Presence integration for Navidrome",
   "website": "https://github.com/navidrome/discord-rich-presence-plugin",
   "permissions": {
@@ -11,11 +11,16 @@
     },
     "http": {
       "reason": "To communicate with Discord API for gateway discovery and image uploads",
-      "requiredHosts": ["discord.com", "uguu.se"]
+      "requiredHosts": [
+        "discord.com",
+        "uguu.se"
+      ]
     },
     "websocket": {
       "reason": "To maintain real-time connection with Discord gateway",
-      "requiredHosts": ["gateway.discord.gg"]
+      "requiredHosts": [
+        "gateway.discord.gg"
+      ]
     },
     "cache": {
       "reason": "To store connection state and sequence numbers"
@@ -68,11 +73,17 @@
                 "minLength": 1
               }
             },
-            "required": ["username", "token"]
+            "required": [
+              "username",
+              "token"
+            ]
           }
         }
       },
-      "required": ["clientid", "users"]
+      "required": [
+        "clientid",
+        "users"
+      ]
     },
     "uiSchema": {
       "type": "VerticalLayout",
