@@ -1,3 +1,4 @@
+SHELL := /usr/bin/env bash
 .PHONY: test build package clean
 
 PLUGIN_NAME := discord-rich-presence
@@ -15,10 +16,8 @@ package: build
 clean:
 	rm -f $(WASM_FILE) $(PLUGIN_NAME).ndp
 
-release: test
+release:
 	@if [[ ! "${V}" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$$ ]]; then echo "Usage: make release V=X.X.X"; exit 1; fi
-	go mod tidy
-	@if [ -n "`git status -s`" ]; then echo "\n\nThere are pending changes. Please commit or stash first"; exit 1; fi
-	git tag v${V}
-	git push origin v${V} --no-verify
+	gh workflow run create-release.yml -f version=${V}
+	@echo "Release v${V} workflow triggered. Check progress: gh run list --workflow=create-release.yml"
 .PHONY: release
