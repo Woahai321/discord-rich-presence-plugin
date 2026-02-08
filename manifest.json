@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/navidrome/navidrome/refs/heads/master/plugins/manifest-schema.json",
   "name": "Discord Rich Presence",
   "author": "Navidrome Team",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Discord Rich Presence integration for Navidrome",
   "website": "https://github.com/navidrome/discord-rich-presence-plugin",
   "permissions": {
@@ -51,7 +51,12 @@
           "type": "string",
           "title": "Activity Name Display",
           "description": "Choose what to display as the activity name in Discord Rich Presence",
-          "enum": ["Default", "Track", "Album", "Artist"],
+          "enum": [
+            "Default",
+            "Track",
+            "Album",
+            "Artist"
+          ],
           "default": "Default"
         },
         "uguuenabled": {
