@@ -13,7 +13,7 @@ permissions:
 
 jobs:
     create-release:
-        name: Create Release Tag
+        name: Create Release
         runs-on: ubuntu-latest
         steps:
             - name: Validate version format
@@ -61,3 +61,20 @@ jobs:
                   git commit --allow-empty -m "Release v${VERSION}"
                   git tag "v${VERSION}"
                   git push origin main "v${VERSION}"
+
+            - name: Install TinyGo
+              run: |
+                  wget https://github.com/tinygo-org/tinygo/releases/download/v0.40.1/tinygo_0.40.1_amd64.deb
+                  sudo dpkg -i tinygo_0.40.1_amd64.deb
+                  sudo apt install -y binaryen
+
+            - name: Build and package plugin
+              run: make package
+
+            - name: Create release
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: v${{ inputs.version }}
+                  draft: true
+                  files: discord-rich-presence.ndp
+                  generate_release_notes: true
