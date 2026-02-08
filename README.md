@@ -43,6 +43,8 @@ We don't provide instructions for obtaining the token as it may violate Discord'
 1. Open Navidrome and go to **Settings > Plugins > Discord Rich Presence**
 2. Fill in the configuration:
    - **Client ID**: Your Discord Application ID from Step 2
+    - **Activity Name Display**: Choose what to show as the activity name (Default, Track, Album, Artist)
+      - "Default" is recommended to help spread awareness of your favorite music server 😉, but feel free to choose the option that best suits your preferences
    - **Upload to uguu.se**: Enable this if your Navidrome isn't publicly accessible (see Album Art section below)
    - **Users**: Add your Navidrome username and Discord token from Step 3
 
@@ -88,6 +90,38 @@ For album artwork to display in Discord, Discord needs to be able to access the 
 - **No album art showing**: Check Navidrome logs for errors
 - **Using public instance**: Verify ND_BASEURL is correct and Navidrome was restarted
 - **Using uguu.se**: Check that the option is enabled and your server has internet access
+
+## Configuration
+
+Access the plugin configuration in Navidrome: **Settings > Plugins > Discord Rich Presence**
+
+### Configuration Fields
+
+#### Client ID
+- **What it is**: Your Discord Application ID
+- **How to get it**: 
+  1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+  2. Create a new application or select an existing one
+  3. Copy the "Application ID" from the General Information page
+- **Example**: `1234567890123456789`
+
+#### Activity Name Display
+- **What it is**: Choose what information to display as the activity name in Discord Rich Presence
+- **Options**:
+  - **Default**: Shows "Navidrome" (static app name)
+  - **Track**: Shows the currently playing track title
+  - **Album**: Shows the currently playing track's album name
+  - **Artist**: Shows the currently playing track's artist name
+
+#### Upload to uguu.se
+- **When to enable**: Your Navidrome instance is NOT publicly accessible from the internet
+- **What it does**: Automatically uploads album artwork to uguu.se (temporary hosting) so Discord can display it
+- **When to disable**: Your Navidrome is publicly accessible and you've set `ND_BASEURL`
+
+#### Users
+Add each Navidrome user who wants Discord Rich Presence. For each user, provide:
+- **Username**: The Navidrome login username (case-sensitive)
+- **Token**: The Discord user token (see Step 3 in Installation for how to obtain this)
 
 ## How It Works
 
@@ -149,59 +183,6 @@ Discord requires images to be registered via their external assets API. The plug
 | [coverart.go](coverart.go)     | Artwork URL handling and optional uguu.se image hosting                |
 | [manifest.json](manifest.json) | Plugin metadata and permission declarations                            |
 | [Makefile](Makefile)           | Build automation                                                       |
-
-## Configuration
-
-Access the plugin configuration in Navidrome: **Settings > Plugins > Discord Rich Presence**
-
-### Configuration Fields
-
-#### Client ID
-- **What it is**: Your Discord Application ID
-- **How to get it**: 
-  1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
-  2. Create a new application or select an existing one
-  3. Copy the "Application ID" from the General Information page
-- **Example**: `1234567890123456789`
-
-#### Activity Name Display
-- **What it is**: Choose what information to display as the activity name in Discord Rich Presence
-- **Options**:
-  - **Default**: Shows "Navidrome" (static app name)
-  - **Track**: Shows the currently playing track title
-  - **Album**: Shows the currently playing track's album name
-  - **Artist**: Shows the currently playing track's artist name
-- **Default**: "Default"
-- **Use case**: Choose "Track" or "Artist" for more dynamic, music-focused presence that changes with each song
-
-#### Upload to uguu.se
-- **When to enable**: Your Navidrome instance is NOT publicly accessible from the internet
-- **What it does**: Automatically uploads album artwork to uguu.se (temporary hosting) so Discord can display it
-- **When to disable**: Your Navidrome is publicly accessible and you've set `ND_BASEURL`
-
-#### Users
-Add each Navidrome user who wants Discord Rich Presence:
-
-**Format**: Array of user objects with `username` and `token` fields
-
-**Example**:
-```json
-[
-  {
-    "username": "john",
-    "token": "your-discord-user-token-here"
-  },
-  {
-    "username": "jane", 
-    "token": "another-discord-user-token"
-  }
-]
-```
-
-**Important**: 
-- `username`: Your Navidrome login username (case-sensitive)
-- `token`: Your Discord user token (see installation instructions for how to obtain this)
-
 
 ## Building
 
