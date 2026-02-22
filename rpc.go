@@ -63,15 +63,18 @@ func (r *discordRPC) OnClose(input websocket.OnCloseRequest) error {
 	return nil
 }
 
-// activity represents a Discord activity.
+// activity represents a Discord activity sent via Gateway opcode 3.
 type activity struct {
-	Name        string             `json:"name"`
-	Type        int                `json:"type"`
-	Details     string             `json:"details"`
-	State       string             `json:"state"`
-	Application string             `json:"application_id"`
-	Timestamps  activityTimestamps `json:"timestamps"`
-	Assets      activityAssets     `json:"assets"`
+	Name              string             `json:"name"`
+	Type              int                `json:"type"`
+	Details           string             `json:"details"`
+	DetailsURL        string             `json:"details_url,omitempty"`
+	State             string             `json:"state"`
+	StateURL          string             `json:"state_url,omitempty"`
+	Application       string             `json:"application_id"`
+	StatusDisplayType *int               `json:"status_display_type,omitempty"`
+	Timestamps        activityTimestamps `json:"timestamps"`
+	Assets            activityAssets     `json:"assets"`
 }
 
 type activityTimestamps struct {
@@ -82,6 +85,9 @@ type activityTimestamps struct {
 type activityAssets struct {
 	LargeImage string `json:"large_image"`
 	LargeText  string `json:"large_text"`
+	LargeURL   string `json:"large_url,omitempty"`
+	SmallImage string `json:"small_image,omitempty"`
+	SmallText  string `json:"small_text,omitempty"`
 }
 
 // presencePayload represents a Discord presence update.
@@ -196,6 +202,16 @@ func (r *discordRPC) sendActivity(clientID, username, token string, data activit
 		data.Assets.LargeImage = ""
 	} else {
 		data.Assets.LargeImage = processedImage
+	}
+
+	if data.Assets.SmallImage != "" {
+		processedSmall, err := r.processImage(data.Assets.SmallImage, clientID, token, false)
+		if err != nil {
+			pdk.Log(pdk.LogWarn, fmt.Sprintf("Failed to process small image for user %s: %v", username, err))
+			data.Assets.SmallImage = ""
+		} else {
+			data.Assets.SmallImage = processedSmall
+		}
 	}
 
 	presence := presencePayload{

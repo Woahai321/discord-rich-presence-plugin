@@ -16,6 +16,9 @@ Based on the [Navicord](https://github.com/logixism/navicord) project.
 ## Features
 
 - Shows currently playing track with title, artist, and album art
+- Clickable track title and artist name link to Spotify (direct track link via [ListenBrainz](https://listenbrainz.org), falls back to Spotify search)
+- Clickable album art links to the Spotify track page
+- Navidrome logo overlay on album art (optional, enabled by default)
 - Customizable activity name: "Navidrome" is default, but can be configured to display track title, artist, or album
 - Displays playback progress with start/end timestamps
 - Automatic presence clearing when track finishes
@@ -120,6 +123,11 @@ Access the plugin configuration in Navidrome: **Settings > Plugins > Discord Ric
 - **What it does**: Automatically uploads album artwork to uguu.se (temporary hosting) so Discord can display it
 - **When to disable**: Your Navidrome is publicly accessible and you've set `ND_BASEURL`
 
+#### Show Navidrome Logo Overlay
+- **Default**: Enabled
+- **What it does**: Displays the Navidrome logo as a small overlay in the corner of the album artwork
+- **When to disable**: If you prefer a clean album art display without the logo badge
+
 #### Users
 Add each Navidrome user who wants Discord Rich Presence. For each user, provide:
 - **Username**: The Navidrome login username (case-sensitive)
@@ -139,14 +147,14 @@ The plugin implements three Navidrome capabilities:
 
 ### Host Services
 
-| Service         | Usage                                                               |
-|-----------------|---------------------------------------------------------------------|
-| **HTTP**        | Discord API calls (gateway discovery, external assets registration) |
-| **WebSocket**   | Persistent connection to Discord gateway                            |
-| **Cache**       | Sequence numbers, processed image URLs                              |
-| **Scheduler**   | Recurring heartbeats, one-time presence clearing                    |
-| **Artwork**     | Track artwork public URL resolution                                 |
-| **SubsonicAPI** | Fetches track artwork data for image hosting upload                 |
+| Service         | Usage                                                                          |
+|-----------------|--------------------------------------------------------------------------------|
+| **HTTP**        | Discord API calls (gateway discovery, external assets registration), ListenBrainz Spotify resolution |
+| **WebSocket**   | Persistent connection to Discord gateway                                       |
+| **Cache**       | Sequence numbers, processed image URLs, resolved Spotify URLs                  |
+| **Scheduler**   | Recurring heartbeats, one-time presence clearing                               |
+| **Artwork**     | Track artwork public URL resolution                                             |
+| **SubsonicAPI** | Fetches track artwork data for image hosting upload                             |
 
 ### Flow
 
@@ -176,15 +184,31 @@ Discord requires images to be registered via their external assets API. The plug
 
 **For non-public Navidrome instances**: If your server isn't publicly accessible (e.g., behind a VPN or firewall), enable the "Upload to uguu.se" option. This uploads artwork to a temporary file host so Discord can display it.
 
+### Spotify Linking
+
+The plugin enriches the Discord presence with clickable Spotify links so others can easily find what you're listening to:
+
+- **Track title** → links to the Spotify track (or a Spotify search as fallback)
+- **Artist name** → links to a Spotify search for the artist
+- **Album art** → links to the Spotify track page
+
+Track URLs are resolved via the [ListenBrainz Labs API](https://labs.api.listenbrainz.org):
+1. If the track has a MusicBrainz Recording ID (MBID), that is used for an exact lookup
+2. Otherwise, artist name, track title, and album are used for a metadata-based lookup
+3. If neither resolves, a Spotify search URL is used as a fallback
+
+Resolved URLs are cached (30 days for direct track links, 4 hours for search fallbacks).
+
 ### Files
 
-| File                           | Description                                                            |
-|--------------------------------|------------------------------------------------------------------------|
-| [main.go](main.go)             | Plugin entry point, scrobbler and scheduler implementations            |
-| [rpc.go](rpc.go)               | Discord gateway communication, WebSocket handling, activity management |
-| [coverart.go](coverart.go)     | Artwork URL handling and optional uguu.se image hosting                |
-| [manifest.json](manifest.json) | Plugin metadata and permission declarations                            |
-| [Makefile](Makefile)           | Build automation                                                       |
+| File                               | Description                                                                    |
+|------------------------------------|--------------------------------------------------------------------------------|
+| [main.go](main.go)                 | Plugin entry point, scrobbler and scheduler implementations, Spotify URL resolution |
+| [rpc.go](rpc.go)                   | Discord gateway communication, WebSocket handling, activity management         |
+| [coverart.go](coverart.go)         | Artwork URL handling and optional uguu.se image hosting                        |
+| [manifest.json](manifest.json)     | Plugin metadata and permission declarations                                    |
+| [navidrome.webp](navidrome.webp)   | Navidrome logo used as the album art overlay badge                             |
+| [Makefile](Makefile)               | Build automation                                                               |
 
 ## Building
 

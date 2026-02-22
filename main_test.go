@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package main
 
 import (
@@ -121,6 +124,7 @@ var _ = Describe("discordPlugin", func() {
 			pdk.PDKMock.On("GetConfig", usersKey).Return(`[{"username":"testuser","token":"test-token"}]`, true)
 			pdk.PDKMock.On("GetConfig", uguuEnabledKey).Return("", false)
 			pdk.PDKMock.On("GetConfig", activityNameKey).Return("", false)
+			pdk.PDKMock.On("GetConfig", navLogoOverlayKey).Return("", false)
 
 			// Connect mocks (isConnected check via heartbeat)
 			host.CacheMock.On("GetInt", "discord.seq.testuser").Return(int64(0), false, errors.New("not found"))
@@ -174,10 +178,11 @@ var _ = Describe("discordPlugin", func() {
 
 		DescribeTable("activity name configuration",
 			func(configValue string, configExists bool, expectedName string) {
-				pdk.PDKMock.On("GetConfig", clientIDKey).Return("test-client-id", true)
-				pdk.PDKMock.On("GetConfig", usersKey).Return(`[{"username":"testuser","token":"test-token"}]`, true)
-				pdk.PDKMock.On("GetConfig", uguuEnabledKey).Return("", false)
-				pdk.PDKMock.On("GetConfig", activityNameKey).Return(configValue, configExists)
+			pdk.PDKMock.On("GetConfig", clientIDKey).Return("test-client-id", true)
+			pdk.PDKMock.On("GetConfig", usersKey).Return(`[{"username":"testuser","token":"test-token"}]`, true)
+			pdk.PDKMock.On("GetConfig", uguuEnabledKey).Return("", false)
+			pdk.PDKMock.On("GetConfig", activityNameKey).Return(configValue, configExists)
+			pdk.PDKMock.On("GetConfig", navLogoOverlayKey).Return("", false)
 
 				// Connect mocks
 				host.CacheMock.On("GetInt", "discord.seq.testuser").Return(int64(0), false, errors.New("not found"))
