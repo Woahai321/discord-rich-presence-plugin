@@ -24,6 +24,12 @@ const (
 
 const heartbeatInterval = 41 // Heartbeat interval in seconds
 
+// Image cache TTL constants
+const (
+	imageCacheTTL        int64 = 4 * 60 * 60  // 4 hours for track artwork
+	defaultImageCacheTTL int64 = 48 * 60 * 60 // 48 hours for default Navidrome logo
+)
+
 // Scheduler callback payloads for routing
 const (
 	payloadHeartbeat     = "heartbeat"
@@ -112,13 +118,11 @@ type identifyProperties struct {
 // Image Processing
 // ============================================================================
 
-// processImage processes an image URL for Discord, with fallback to default image.
-func (r *discordRPC) processImage(imageURL, clientID, token string, isDefaultImage bool) (string, error) {
+// processImage processes an image URL for Discord. Returns the processed image
+// string (mp:prefixed) or an error. No fallback logic — the caller handles retries.
+func (r *discordRPC) processImage(imageURL, clientID, token string, ttl int64) (string, error) {
 	if imageURL == "" {
-		if isDefaultImage {
-			return "", fmt.Errorf("default image URL is empty")
-		}
-		return r.processImage(navidromeLogoURL, clientID, token, true)
+		return "", fmt.Errorf("image URL is empty")
 	}
 
 	if strings.HasPrefix(imageURL, "mp:") {
@@ -142,42 +146,24 @@ func (r *discordRPC) processImage(imageURL, clientID, token string, isDefaultIma
 
 	resp := req.Send()
 	if resp.Status() >= 400 {
-		if isDefaultImage {
-			return "", fmt.Errorf("failed to process default image: HTTP %d", resp.Status())
-		}
-		return r.processImage(navidromeLogoURL, clientID, token, true)
+		return "", fmt.Errorf("failed to process image: HTTP %d", resp.Status())
 	}
 
 	var data []map[string]string
 	if err := json.Unmarshal(resp.Body(), &data); err != nil {
-		if isDefaultImage {
-			return "", fmt.Errorf("failed to unmarshal default image response: %w", err)
-		}
-		return r.processImage(navidromeLogoURL, clientID, token, true)
+		return "", fmt.Errorf("failed to unmarshal image response: %w", err)
 	}
 
 	if len(data) == 0 {
-		if isDefaultImage {
-			return "", fmt.Errorf("no data returned for default image")
-		}
-		return r.processImage(navidromeLogoURL, clientID, token, true)
+		return "", fmt.Errorf("no data returned for image")
 	}
 
 	image := data[0]["external_asset_path"]
 	if image == "" {
-		if isDefaultImage {
-			return "", fmt.Errorf("empty external_asset_path for default image")
-		}
-		return r.processImage(navidromeLogoURL, clientID, token, true)
+		return "", fmt.Errorf("empty external_asset_path for image")
 	}
 
 	processedImage := fmt.Sprintf("mp:%s", image)
-
-	// Cache the processed image URL
-	var ttl int64 = 4 * 60 * 60 // 4 hours for regular images
-	if isDefaultImage {
-		ttl = 48 * 60 * 60 // 48 hours for default image
-	}
 
 	_ = host.CacheSetString(cacheKey, processedImage, ttl)
 	pdk.Log(pdk.LogDebug, fmt.Sprintf("Cached processed image URL for %s (TTL: %ds)", imageURL, ttl))
@@ -193,19 +179,33 @@ func (r *discordRPC) processImage(imageURL, clientID, token string, isDefaultIma
 func (r *discordRPC) sendActivity(clientID, username, token string, data activity) error {
 	pdk.Log(pdk.LogInfo, fmt.Sprintf("Sending activity for user %s: %s - %s", username, data.Details, data.State))
 
-	processedImage, err := r.processImage(data.Assets.LargeImage, clientID, token, false)
+	// Try track artwork first, fall back to Navidrome logo
+	usingDefaultImage := false
+	processedImage, err := r.processImage(data.Assets.LargeImage, clientID, token, imageCacheTTL)
 	if err != nil {
-		pdk.Log(pdk.LogWarn, fmt.Sprintf("Failed to process image for user %s, continuing without image: %v", username, err))
-		data.Assets.LargeImage = ""
+		pdk.Log(pdk.LogWarn, fmt.Sprintf("Failed to process track image for user %s: %v, falling back to default", username, err))
+		processedImage, err = r.processImage(navidromeLogoURL, clientID, token, defaultImageCacheTTL)
+		if err != nil {
+			pdk.Log(pdk.LogWarn, fmt.Sprintf("Failed to process default image for user %s: %v, continuing without image", username, err))
+			data.Assets.LargeImage = ""
+		} else {
+			data.Assets.LargeImage = processedImage
+			usingDefaultImage = true
+		}
 	} else {
 		data.Assets.LargeImage = processedImage
 	}
 
-	if data.Assets.SmallImage != "" {
-		processedSmall, err := r.processImage(data.Assets.SmallImage, clientID, token, false)
+	// Only show SmallImage (Navidrome logo overlay) when LargeImage is actual track artwork
+	if usingDefaultImage || data.Assets.LargeImage == "" {
+		data.Assets.SmallImage = ""
+		data.Assets.SmallText = ""
+	} else if data.Assets.SmallImage != "" {
+		processedSmall, err := r.processImage(data.Assets.SmallImage, clientID, token, defaultImageCacheTTL)
 		if err != nil {
 			pdk.Log(pdk.LogWarn, fmt.Sprintf("Failed to process small image for user %s: %v", username, err))
 			data.Assets.SmallImage = ""
+			data.Assets.SmallText = ""
 		} else {
 			data.Assets.SmallImage = processedSmall
 		}
