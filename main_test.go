@@ -1,6 +1,3 @@
-//go:build integration
-// +build integration
-
 package main
 
 import (
@@ -145,19 +142,15 @@ var _ = Describe("discordPlugin", func() {
 			// Cancel existing clear schedule (may or may not exist)
 			host.SchedulerMock.On("CancelSchedule", "testuser-clear").Return(nil)
 
-			// Image mocks - cache miss, will make HTTP request to Discord
-			host.CacheMock.On("GetString", mock.MatchedBy(func(key string) bool {
-				return strings.HasPrefix(key, "discord.image.")
-			})).Return("", false, nil)
+			// Cache mocks (Spotify URL resolution + Discord image processing)
+			host.CacheMock.On("GetString", mock.Anything).Return("", false, nil)
 			host.CacheMock.On("SetString", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 			host.ArtworkMock.On("GetTrackUrl", "track1", int32(300)).Return("https://example.com/art.jpg", nil)
 
-			// Mock HTTP request for Discord external assets API
-			assetsReq := &pdk.HTTPRequest{}
-			pdk.PDKMock.On("NewHTTPRequest", pdk.MethodPost, mock.MatchedBy(func(url string) bool {
-				return strings.Contains(url, "external-assets")
-			})).Return(assetsReq)
-			pdk.PDKMock.On("Send", assetsReq).Return(pdk.NewStubHTTPResponse(200, nil, []byte(`{"key":"test-key"}`)))
+			// Mock HTTP POST requests (ListenBrainz + Discord external assets API)
+			postReq := &pdk.HTTPRequest{}
+			pdk.PDKMock.On("NewHTTPRequest", pdk.MethodPost, mock.Anything).Return(postReq)
+			pdk.PDKMock.On("Send", postReq).Return(pdk.NewStubHTTPResponse(200, nil, []byte(`[{"spotify_track_ids":[]}]`)))
 
 			// Schedule clear activity callback
 			host.SchedulerMock.On("ScheduleOneTime", mock.Anything, payloadClearActivity, "testuser-clear").Return("testuser-clear", nil)
@@ -178,11 +171,11 @@ var _ = Describe("discordPlugin", func() {
 
 		DescribeTable("activity name configuration",
 			func(configValue string, configExists bool, expectedName string) {
-			pdk.PDKMock.On("GetConfig", clientIDKey).Return("test-client-id", true)
-			pdk.PDKMock.On("GetConfig", usersKey).Return(`[{"username":"testuser","token":"test-token"}]`, true)
-			pdk.PDKMock.On("GetConfig", uguuEnabledKey).Return("", false)
-			pdk.PDKMock.On("GetConfig", activityNameKey).Return(configValue, configExists)
-			pdk.PDKMock.On("GetConfig", navLogoOverlayKey).Return("", false)
+				pdk.PDKMock.On("GetConfig", clientIDKey).Return("test-client-id", true)
+				pdk.PDKMock.On("GetConfig", usersKey).Return(`[{"username":"testuser","token":"test-token"}]`, true)
+				pdk.PDKMock.On("GetConfig", uguuEnabledKey).Return("", false)
+				pdk.PDKMock.On("GetConfig", activityNameKey).Return(configValue, configExists)
+				pdk.PDKMock.On("GetConfig", navLogoOverlayKey).Return("", false)
 
 				// Connect mocks
 				host.CacheMock.On("GetInt", "discord.seq.testuser").Return(int64(0), false, errors.New("not found"))
@@ -202,17 +195,13 @@ var _ = Describe("discordPlugin", func() {
 				host.SchedulerMock.On("ScheduleRecurring", mock.Anything, payloadHeartbeat, "testuser").Return("testuser", nil)
 				host.SchedulerMock.On("CancelSchedule", "testuser-clear").Return(nil)
 
-				// Image mocks
-				host.CacheMock.On("GetString", mock.MatchedBy(func(key string) bool {
-					return strings.HasPrefix(key, "discord.image.")
-				})).Return("", false, nil)
+				// Cache mocks (Spotify URL resolution + Discord image processing)
+				host.CacheMock.On("GetString", mock.Anything).Return("", false, nil)
 				host.CacheMock.On("SetString", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 				host.ArtworkMock.On("GetTrackUrl", "track1", int32(300)).Return("https://example.com/art.jpg", nil)
-				assetsReq := &pdk.HTTPRequest{}
-				pdk.PDKMock.On("NewHTTPRequest", pdk.MethodPost, mock.MatchedBy(func(url string) bool {
-					return strings.Contains(url, "external-assets")
-				})).Return(assetsReq)
-				pdk.PDKMock.On("Send", assetsReq).Return(pdk.NewStubHTTPResponse(200, nil, []byte(`{"key":"test-key"}`)))
+				postReq := &pdk.HTTPRequest{}
+				pdk.PDKMock.On("NewHTTPRequest", pdk.MethodPost, mock.Anything).Return(postReq)
+				pdk.PDKMock.On("Send", postReq).Return(pdk.NewStubHTTPResponse(200, nil, []byte(`[{"spotify_track_ids":[]}]`)))
 				host.SchedulerMock.On("ScheduleOneTime", mock.Anything, payloadClearActivity, "testuser-clear").Return("testuser-clear", nil)
 
 				err := plugin.NowPlaying(scrobbler.NowPlayingRequest{

@@ -10,12 +10,11 @@
       "reason": "To process scrobbles on behalf of users"
     },
     "http": {
-      "reason": "To communicate with Discord API, image uploads, Spotify track resolution via ListenBrainz, and fetch the Navidrome logo overlay",
+      "reason": "To communicate with Discord API, image uploads, and ListenBrainz for track resolution",
       "requiredHosts": [
         "discord.com",
         "uguu.se",
-        "labs.api.listenbrainz.org",
-        "raw.githubusercontent.com"
+        "labs.api.listenbrainz.org"
       ]
     },
     "websocket": {

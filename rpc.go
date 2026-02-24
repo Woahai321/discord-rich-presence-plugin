@@ -22,10 +22,7 @@ const (
 	presenceOpCode  = 3 // Presence update operation code
 )
 
-const (
-	heartbeatInterval = 41 // Heartbeat interval in seconds
-	defaultImage      = "https://i.imgur.com/hb3XPzA.png"
-)
+const heartbeatInterval = 41 // Heartbeat interval in seconds
 
 // Scheduler callback payloads for routing
 const (
@@ -72,7 +69,7 @@ type activity struct {
 	State             string             `json:"state"`
 	StateURL          string             `json:"state_url,omitempty"`
 	Application       string             `json:"application_id"`
-	StatusDisplayType *int               `json:"status_display_type,omitempty"`
+	StatusDisplayType int                `json:"status_display_type"`
 	Timestamps        activityTimestamps `json:"timestamps"`
 	Assets            activityAssets     `json:"assets"`
 }
@@ -121,7 +118,7 @@ func (r *discordRPC) processImage(imageURL, clientID, token string, isDefaultIma
 		if isDefaultImage {
 			return "", fmt.Errorf("default image URL is empty")
 		}
-		return r.processImage(defaultImage, clientID, token, true)
+		return r.processImage(navidromeLogoURL, clientID, token, true)
 	}
 
 	if strings.HasPrefix(imageURL, "mp:") {
@@ -148,7 +145,7 @@ func (r *discordRPC) processImage(imageURL, clientID, token string, isDefaultIma
 		if isDefaultImage {
 			return "", fmt.Errorf("failed to process default image: HTTP %d", resp.Status())
 		}
-		return r.processImage(defaultImage, clientID, token, true)
+		return r.processImage(navidromeLogoURL, clientID, token, true)
 	}
 
 	var data []map[string]string
@@ -156,14 +153,14 @@ func (r *discordRPC) processImage(imageURL, clientID, token string, isDefaultIma
 		if isDefaultImage {
 			return "", fmt.Errorf("failed to unmarshal default image response: %w", err)
 		}
-		return r.processImage(defaultImage, clientID, token, true)
+		return r.processImage(navidromeLogoURL, clientID, token, true)
 	}
 
 	if len(data) == 0 {
 		if isDefaultImage {
 			return "", fmt.Errorf("no data returned for default image")
 		}
-		return r.processImage(defaultImage, clientID, token, true)
+		return r.processImage(navidromeLogoURL, clientID, token, true)
 	}
 
 	image := data[0]["external_asset_path"]
@@ -171,7 +168,7 @@ func (r *discordRPC) processImage(imageURL, clientID, token string, isDefaultIma
 		if isDefaultImage {
 			return "", fmt.Errorf("empty external_asset_path for default image")
 		}
-		return r.processImage(defaultImage, clientID, token, true)
+		return r.processImage(navidromeLogoURL, clientID, token, true)
 	}
 
 	processedImage := fmt.Sprintf("mp:%s", image)
