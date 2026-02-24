@@ -3,6 +3,11 @@
 // This file handles all Discord gateway communication including WebSocket connections,
 // presence updates, and heartbeat management. The discordRPC struct implements WebSocket
 // callback interfaces and encapsulates all Discord communication logic.
+//
+// References:
+//   - Gateway Events (official): https://docs.discord.com/developers/events/gateway-events
+//   - Activity object (community): https://discord-api-types.dev/api/next/discord-api-types-v10/interface/GatewayActivity
+//   - Presence resources (community): https://docs.discord.food/resources/presence
 package main
 
 import (
@@ -14,22 +19,6 @@ import (
 	"github.com/navidrome/navidrome/plugins/pdk/go/pdk"
 	"github.com/navidrome/navidrome/plugins/pdk/go/websocket"
 )
-
-// Discord WebSocket Gateway constants
-const (
-	heartbeatOpCode = 1 // Heartbeat operation code
-	gateOpCode      = 2 // Identify operation code
-	presenceOpCode  = 3 // Presence update operation code
-)
-
-// Discord status_display_type values control how the activity name is shown.
-// Type 0 renders the name as-is; type 2 renders the name with a "Listening to" prefix.
-const (
-	statusDisplayDefault   = 0 // Show activity name as-is (e.g. track title)
-	statusDisplayListening = 2 // Show "Listening to <name>" (used for "Navidrome")
-)
-
-const heartbeatInterval = 41 // Heartbeat interval in seconds
 
 // Image cache TTL constants
 const (
@@ -47,31 +36,24 @@ const (
 type discordRPC struct{}
 
 // ============================================================================
-// WebSocket Callback Implementation
+// Discord types and constants
 // ============================================================================
 
-// OnTextMessage handles incoming WebSocket text messages.
-func (r *discordRPC) OnTextMessage(input websocket.OnTextMessageRequest) error {
-	return r.handleWebSocketMessage(input.ConnectionID, input.Message)
-}
+// Discord WebSocket Gateway constants
+const (
+	heartbeatOpCode = 1 // Heartbeat operation code
+	gateOpCode      = 2 // Identify operation code
+	presenceOpCode  = 3 // Presence update operation code
+)
 
-// OnBinaryMessage handles incoming WebSocket binary messages.
-func (r *discordRPC) OnBinaryMessage(input websocket.OnBinaryMessageRequest) error {
-	pdk.Log(pdk.LogDebug, fmt.Sprintf("Received unexpected binary message for connection '%s'", input.ConnectionID))
-	return nil
-}
+// Discord status_display_type values control how the activity is shown in the member list.
+const (
+	statusDisplayName    = 0 // Show activity name in member list
+	statusDisplayState   = 1 // Show state field in member list
+	statusDisplayDetails = 2 // Show details field in member list
+)
 
-// OnError handles WebSocket errors.
-func (r *discordRPC) OnError(input websocket.OnErrorRequest) error {
-	pdk.Log(pdk.LogWarn, fmt.Sprintf("WebSocket error for connection '%s': %s", input.ConnectionID, input.Error))
-	return nil
-}
-
-// OnClose handles WebSocket connection closure.
-func (r *discordRPC) OnClose(input websocket.OnCloseRequest) error {
-	pdk.Log(pdk.LogInfo, fmt.Sprintf("WebSocket connection '%s' closed with code %d: %s", input.ConnectionID, input.Code, input.Reason))
-	return nil
-}
+const heartbeatInterval = 41 // Heartbeat interval in seconds
 
 // activity represents a Discord activity sent via Gateway opcode 3.
 type activity struct {
@@ -120,6 +102,33 @@ type identifyProperties struct {
 	OS      string `json:"os"`
 	Browser string `json:"browser"`
 	Device  string `json:"device"`
+}
+
+// ============================================================================
+// WebSocket Callback Implementation
+// ============================================================================
+
+// OnTextMessage handles incoming WebSocket text messages.
+func (r *discordRPC) OnTextMessage(input websocket.OnTextMessageRequest) error {
+	return r.handleWebSocketMessage(input.ConnectionID, input.Message)
+}
+
+// OnBinaryMessage handles incoming WebSocket binary messages.
+func (r *discordRPC) OnBinaryMessage(input websocket.OnBinaryMessageRequest) error {
+	pdk.Log(pdk.LogDebug, fmt.Sprintf("Received unexpected binary message for connection '%s'", input.ConnectionID))
+	return nil
+}
+
+// OnError handles WebSocket errors.
+func (r *discordRPC) OnError(input websocket.OnErrorRequest) error {
+	pdk.Log(pdk.LogWarn, fmt.Sprintf("WebSocket error for connection '%s': %s", input.ConnectionID, input.Error))
+	return nil
+}
+
+// OnClose handles WebSocket connection closure.
+func (r *discordRPC) OnClose(input websocket.OnCloseRequest) error {
+	pdk.Log(pdk.LogInfo, fmt.Sprintf("WebSocket connection '%s' closed with code %d: %s", input.ConnectionID, input.Code, input.Reason))
+	return nil
 }
 
 // ============================================================================
