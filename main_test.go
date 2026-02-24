@@ -143,13 +143,13 @@ var _ = Describe("discordPlugin", func() {
 			host.SchedulerMock.On("CancelSchedule", "testuser-clear").Return(nil)
 
 			// Cache mocks (Discord image processing)
-			host.CacheMock.On("GetString", mock.Anything).Return("", false, nil)
-			host.CacheMock.On("SetString", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+			host.CacheMock.On("GetString", discordImageKey).Return("", false, nil)
+			host.CacheMock.On("SetString", discordImageKey, mock.Anything, mock.Anything).Return(nil)
 			host.ArtworkMock.On("GetTrackUrl", "track1", int32(300)).Return("https://example.com/art.jpg", nil)
 
 			// Mock HTTP POST requests (Discord external assets API)
 			postReq := &pdk.HTTPRequest{}
-			pdk.PDKMock.On("NewHTTPRequest", pdk.MethodPost, mock.Anything).Return(postReq)
+			pdk.PDKMock.On("NewHTTPRequest", pdk.MethodPost, externalAssetsURL).Return(postReq)
 			pdk.PDKMock.On("Send", postReq).Return(pdk.NewStubHTTPResponse(200, nil, []byte(`{}`)))
 
 			// Schedule clear activity callback
@@ -196,11 +196,11 @@ var _ = Describe("discordPlugin", func() {
 				host.SchedulerMock.On("CancelSchedule", "testuser-clear").Return(nil)
 
 				// Cache mocks (Discord image processing)
-				host.CacheMock.On("GetString", mock.Anything).Return("", false, nil)
-				host.CacheMock.On("SetString", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+				host.CacheMock.On("GetString", discordImageKey).Return("", false, nil)
+				host.CacheMock.On("SetString", discordImageKey, mock.Anything, mock.Anything).Return(nil)
 				host.ArtworkMock.On("GetTrackUrl", "track1", int32(300)).Return("https://example.com/art.jpg", nil)
 				postReq := &pdk.HTTPRequest{}
-				pdk.PDKMock.On("NewHTTPRequest", pdk.MethodPost, mock.Anything).Return(postReq)
+				pdk.PDKMock.On("NewHTTPRequest", pdk.MethodPost, externalAssetsURL).Return(postReq)
 				pdk.PDKMock.On("Send", postReq).Return(pdk.NewStubHTTPResponse(200, nil, []byte(`{}`)))
 				host.SchedulerMock.On("ScheduleOneTime", mock.Anything, payloadClearActivity, "testuser-clear").Return("testuser-clear", nil)
 

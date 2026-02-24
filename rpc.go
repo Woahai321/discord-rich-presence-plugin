@@ -6,6 +6,8 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -130,7 +132,8 @@ func (r *discordRPC) processImage(imageURL, clientID, token string, ttl int64) (
 	}
 
 	// Check cache first
-	cacheKey := fmt.Sprintf("discord.image.%x", imageURL)
+	h := md5.Sum([]byte(imageURL))
+	cacheKey := "discord.image." + hex.EncodeToString(h[:8])
 	cachedValue, exists, err := host.CacheGetString(cacheKey)
 	if err == nil && exists {
 		pdk.Log(pdk.LogDebug, fmt.Sprintf("Cache hit for image URL: %s", imageURL))

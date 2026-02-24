@@ -1,11 +1,12 @@
 package main
 
 import (
-	"crypto/sha256"
+	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/navidrome/navidrome/plugins/pdk/go/host"
@@ -26,7 +27,7 @@ type listenBrainzResult struct {
 
 // buildSpotifySearchURL constructs a Spotify search URL using artist and title.
 // Used as the ultimate fallback when ListenBrainz resolution fails.
-func buildSpotifySearchURL(title, artist string) string {
+func buildSpotifySearchURL(artist, title string) string {
 	query := strings.TrimSpace(strings.Join([]string{artist, title}, " "))
 	if query == "" {
 		return "https://open.spotify.com/search/"
@@ -45,7 +46,7 @@ func spotifySearch(term string) string {
 
 // spotifyCacheKey returns a deterministic cache key for a track's Spotify URL.
 func spotifyCacheKey(artist, title, album string) string {
-	h := sha256.Sum256([]byte(strings.ToLower(artist) + "\x00" + strings.ToLower(title) + "\x00" + strings.ToLower(album)))
+	h := md5.Sum([]byte(strings.ToLower(artist) + "\x00" + strings.ToLower(title) + "\x00" + strings.ToLower(album)))
 	return "spotify.url." + hex.EncodeToString(h[:8])
 }
 
@@ -101,12 +102,19 @@ func parseSpotifyID(body []byte) string {
 	}
 	for _, r := range results {
 		for _, id := range r.SpotifyTrackIDs {
-			if id != "" {
+			if isValidSpotifyID(id) {
 				return id
 			}
 		}
 	}
 	return ""
+}
+
+// isValidSpotifyID checks that a Spotify track ID contains only base-62 characters.
+var spotifyIDRegex = regexp.MustCompile(`^[0-9A-Za-z]+$`)
+
+func isValidSpotifyID(id string) bool {
+	return spotifyIDRegex.MatchString(id)
 }
 
 // resolveSpotifyURL resolves a direct Spotify track URL via ListenBrainz Labs,
@@ -150,7 +158,7 @@ func resolveSpotifyURL(track scrobbler.TrackInfo) string {
 	}
 
 	// 3. Fallback to search URL
-	searchURL := buildSpotifySearchURL(track.Title, track.Artist)
+	searchURL := buildSpotifySearchURL(track.Artist, track.Title)
 	_ = host.CacheSetString(cacheKey, searchURL, spotifyCacheTTLMiss)
 	pdk.Log(pdk.LogInfo, fmt.Sprintf("Spotify resolution missed, falling back to search URL for %q - %q: %s", primary, track.Title, searchURL))
 	return searchURL

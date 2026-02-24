@@ -33,17 +33,17 @@ var _ = Describe("Spotify", func() {
 
 	Describe("buildSpotifySearchURL", func() {
 		DescribeTable("constructs Spotify search URL",
-			func(title, artist, expectedSubstring string) {
-				url := buildSpotifySearchURL(title, artist)
+			func(artist, title, expectedSubstring string) {
+				url := buildSpotifySearchURL(artist, title)
 				Expect(url).To(HavePrefix("https://open.spotify.com/search/"))
 				if expectedSubstring != "" {
 					Expect(url).To(ContainSubstring(expectedSubstring))
 				}
 			},
-			Entry("artist and title", "Never Gonna Give You Up", "Rick Astley", "Rick%20Astley"),
-			Entry("another track", "Karma Police", "Radiohead", "Radiohead"),
-			Entry("empty title", "", "Solo Artist", "Solo%20Artist"),
-			Entry("empty artist", "Only Title", "", "Only%20Title"),
+			Entry("artist and title", "Rick Astley", "Never Gonna Give You Up", "Rick%20Astley"),
+			Entry("another track", "Radiohead", "Karma Police", "Radiohead"),
+			Entry("empty artist", "", "Only Title", "Only%20Title"),
+			Entry("empty title", "Solo Artist", "", "Solo%20Artist"),
 			Entry("both empty", "", "", ""),
 		)
 	})
@@ -93,7 +93,23 @@ var _ = Describe("Spotify", func() {
 			Entry("invalid JSON",
 				`not json`, ""),
 			Entry("null first result falls through to second",
-				`[{"spotify_track_ids":[]},{"spotify_track_ids":["abc123"]}]`, "abc123"),
+				`[{"spotify_track_ids":[]},{"spotify_track_ids":["6vN77lE9LK6HP2DewaN6HZ"]}]`, "6vN77lE9LK6HP2DewaN6HZ"),
+			Entry("skips invalid ID with special characters",
+				`[{"spotify_track_ids":["abc!@#$%^&*()_+=-12345"]}]`, ""),
+		)
+	})
+
+	Describe("isValidSpotifyID", func() {
+		DescribeTable("validates Spotify track IDs",
+			func(id string, expected bool) {
+				Expect(isValidSpotifyID(id)).To(Equal(expected))
+			},
+			Entry("valid 22-char ID", "6vN77lE9LK6HP2DewaN6HZ", true),
+			Entry("another valid ID", "4tIGK5G9hNDA50ZdGioZRG", true),
+			Entry("short valid ID", "abc123", true),
+			Entry("special characters", "6vN77lE9!K6HP2DewaN6HZ", false),
+			Entry("spaces", "6vN77 E9LK6HP2DewaN6HZ", false),
+			Entry("empty string", "", false),
 		)
 	})
 
@@ -128,7 +144,7 @@ var _ = Describe("Spotify", func() {
 		})
 
 		It("returns cached URL on cache hit", func() {
-			host.CacheMock.On("GetString", mock.Anything).Return("https://open.spotify.com/track/cached123", true, nil)
+			host.CacheMock.On("GetString", spotifyURLKey).Return("https://open.spotify.com/track/cached123", true, nil)
 
 			url := resolveSpotifyURL(scrobbler.TrackInfo{
 				Title:  "Karma Police",
@@ -139,14 +155,14 @@ var _ = Describe("Spotify", func() {
 		})
 
 		It("resolves via MBID when available", func() {
-			host.CacheMock.On("GetString", mock.Anything).Return("", false, nil)
-			host.CacheMock.On("SetString", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+			host.CacheMock.On("GetString", spotifyURLKey).Return("", false, nil)
+			host.CacheMock.On("SetString", spotifyURLKey, mock.Anything, mock.Anything).Return(nil)
 
 			// Mock the MBID HTTP request
 			mbidReq := &pdk.HTTPRequest{}
 			pdk.PDKMock.On("NewHTTPRequest", pdk.MethodPost, "https://labs.api.listenbrainz.org/spotify-id-from-mbid/json").Return(mbidReq)
 			pdk.PDKMock.On("Send", mbidReq).Return(pdk.NewStubHTTPResponse(200, nil,
-				[]byte(`[{"spotify_track_ids":["track123"]}]`)))
+				[]byte(`[{"spotify_track_ids":["63OQupATfueTdZMWIV7nzz"]}]`)))
 
 			url := resolveSpotifyURL(scrobbler.TrackInfo{
 				Title:          "Karma Police",
@@ -154,13 +170,13 @@ var _ = Describe("Spotify", func() {
 				Album:          "OK Computer",
 				MBZRecordingID: "mbid-123",
 			})
-			Expect(url).To(Equal("https://open.spotify.com/track/track123"))
-			host.CacheMock.AssertCalled(GinkgoT(), "SetString", mock.Anything, "https://open.spotify.com/track/track123", spotifyCacheTTLHit)
+			Expect(url).To(Equal("https://open.spotify.com/track/63OQupATfueTdZMWIV7nzz"))
+			host.CacheMock.AssertCalled(GinkgoT(), "SetString", spotifyURLKey, "https://open.spotify.com/track/63OQupATfueTdZMWIV7nzz", spotifyCacheTTLHit)
 		})
 
 		It("falls back to metadata lookup when MBID fails", func() {
-			host.CacheMock.On("GetString", mock.Anything).Return("", false, nil)
-			host.CacheMock.On("SetString", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+			host.CacheMock.On("GetString", spotifyURLKey).Return("", false, nil)
+			host.CacheMock.On("SetString", spotifyURLKey, mock.Anything, mock.Anything).Return(nil)
 
 			// MBID request fails
 			mbidReq := &pdk.HTTPRequest{}
@@ -171,7 +187,7 @@ var _ = Describe("Spotify", func() {
 			metaReq := &pdk.HTTPRequest{}
 			pdk.PDKMock.On("NewHTTPRequest", pdk.MethodPost, "https://labs.api.listenbrainz.org/spotify-id-from-metadata/json").Return(metaReq)
 			pdk.PDKMock.On("Send", metaReq).Return(pdk.NewStubHTTPResponse(200, nil,
-				[]byte(`[{"spotify_track_ids":["meta456"]}]`)))
+				[]byte(`[{"spotify_track_ids":["4wlLbLeDWbA6TzwZFp1UaK"]}]`)))
 
 			url := resolveSpotifyURL(scrobbler.TrackInfo{
 				Title:          "Karma Police",
@@ -179,12 +195,12 @@ var _ = Describe("Spotify", func() {
 				Album:          "OK Computer",
 				MBZRecordingID: "mbid-123",
 			})
-			Expect(url).To(Equal("https://open.spotify.com/track/meta456"))
+			Expect(url).To(Equal("https://open.spotify.com/track/4wlLbLeDWbA6TzwZFp1UaK"))
 		})
 
 		It("falls back to search URL when both lookups fail", func() {
-			host.CacheMock.On("GetString", mock.Anything).Return("", false, nil)
-			host.CacheMock.On("SetString", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+			host.CacheMock.On("GetString", spotifyURLKey).Return("", false, nil)
+			host.CacheMock.On("SetString", spotifyURLKey, mock.Anything, mock.Anything).Return(nil)
 
 			// No MBID, metadata request fails
 			metaReq := &pdk.HTTPRequest{}
@@ -198,17 +214,17 @@ var _ = Describe("Spotify", func() {
 			})
 			Expect(url).To(HavePrefix("https://open.spotify.com/search/"))
 			Expect(url).To(ContainSubstring("Radiohead"))
-			host.CacheMock.AssertCalled(GinkgoT(), "SetString", mock.Anything, mock.Anything, spotifyCacheTTLMiss)
+			host.CacheMock.AssertCalled(GinkgoT(), "SetString", spotifyURLKey, mock.Anything, spotifyCacheTTLMiss)
 		})
 
 		It("uses Artists fallback when primary artist parse is empty", func() {
-			host.CacheMock.On("GetString", mock.Anything).Return("", false, nil)
-			host.CacheMock.On("SetString", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+			host.CacheMock.On("GetString", spotifyURLKey).Return("", false, nil)
+			host.CacheMock.On("SetString", spotifyURLKey, mock.Anything, mock.Anything).Return(nil)
 
 			metaReq := &pdk.HTTPRequest{}
 			pdk.PDKMock.On("NewHTTPRequest", pdk.MethodPost, "https://labs.api.listenbrainz.org/spotify-id-from-metadata/json").Return(metaReq)
 			pdk.PDKMock.On("Send", metaReq).Return(pdk.NewStubHTTPResponse(200, nil,
-				[]byte(`[{"spotify_track_ids":["fromArtists789"]}]`)))
+				[]byte(`[{"spotify_track_ids":["4tIGK5G9hNDA50ZdGioZRG"]}]`)))
 
 			url := resolveSpotifyURL(scrobbler.TrackInfo{
 				Title:   "Some Song",
@@ -216,7 +232,7 @@ var _ = Describe("Spotify", func() {
 				Album:   "Some Album",
 				Artists: []scrobbler.ArtistRef{{Name: "Fallback Artist"}},
 			})
-			Expect(url).To(Equal("https://open.spotify.com/track/fromArtists789"))
+			Expect(url).To(Equal("https://open.spotify.com/track/4tIGK5G9hNDA50ZdGioZRG"))
 		})
 	})
 })
