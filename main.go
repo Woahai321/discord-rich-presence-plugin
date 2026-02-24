@@ -31,9 +31,13 @@ const (
 	spotifyLinksKey = "spotifylinks"
 )
 
-// navidromeLogoURL is the small overlay image shown in the bottom-right of the album art.
-// The file is stored in Navidrome's website repository so Discord can fetch it as an external asset.
-const navidromeLogoURL = "https://raw.githubusercontent.com/navidrome/website/refs/heads/master/assets/icons/logo.webp"
+const (
+	navidromeWebsiteURL = "https://www.navidrome.org"
+
+	// navidromeLogoURL is the small overlay image shown in the bottom-right of the album art.
+	// The file is stored in the plugins' GitHub repository so Discord can fetch it as an external asset.
+	navidromeLogoURL = "https://raw.githubusercontent.com/navidrome/website/refs/heads/master/assets/icons/logo.webp"
+)
 
 // Activity name display options
 const (
@@ -194,6 +198,7 @@ func (p *discordPlugin) NowPlaying(input scrobbler.NowPlayingRequest) error {
 			LargeURL:   spotifyURL,
 			SmallImage: navidromeLogoURL,
 			SmallText:  "Navidrome",
+			SmallURL:   navidromeWebsiteURL,
 		},
 	}); err != nil {
 		return fmt.Errorf("%w: failed to send activity: %v", scrobbler.ScrobblerErrorRetryLater, err)

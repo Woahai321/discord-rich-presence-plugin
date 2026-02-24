@@ -98,6 +98,7 @@ type activityAssets struct {
 	LargeURL   string `json:"large_url,omitempty"`
 	SmallImage string `json:"small_image,omitempty"`
 	SmallText  string `json:"small_text,omitempty"`
+	SmallURL   string `json:"small_url,omitempty"`
 }
 
 // presencePayload represents a Discord presence update.
