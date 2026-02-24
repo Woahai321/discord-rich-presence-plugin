@@ -152,17 +152,18 @@ func (p *discordPlugin) NowPlaying(input scrobbler.NowPlayingRequest) error {
 
 	// Resolve the activity name based on configuration
 	activityName := "Navidrome"
-	statusDisplayType := 0
+	statusDisplayType := statusDisplayListening
 	activityNameOption, _ := pdk.GetConfig(activityNameKey)
 	switch activityNameOption {
 	case activityNameTrack:
 		activityName = input.Track.Title
+		statusDisplayType = statusDisplayDefault
 	case activityNameAlbum:
 		activityName = input.Track.Album
+		statusDisplayType = statusDisplayDefault
 	case activityNameArtist:
 		activityName = input.Track.Artist
-	default:
-		statusDisplayType = 2
+		statusDisplayType = statusDisplayDefault
 	}
 
 	// Resolve Spotify URLs if enabled
@@ -170,7 +171,7 @@ func (p *discordPlugin) NowPlaying(input scrobbler.NowPlayingRequest) error {
 	spotifyLinksOption, _ := pdk.GetConfig(spotifyLinksKey)
 	if spotifyLinksOption == "true" {
 		spotifyURL = resolveSpotifyURL(input.Track)
-		artistSearchURL = spotifySearch(input.Track.Artist)
+		artistSearchURL = spotifySearchURL(input.Track.Artist)
 	}
 
 	// Send activity update

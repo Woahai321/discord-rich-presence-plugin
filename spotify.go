@@ -14,6 +14,12 @@ import (
 	"github.com/navidrome/navidrome/plugins/pdk/go/scrobbler"
 )
 
+// hashKey returns a hex-encoded MD5 hash of s, for use as a cache key suffix.
+func hashKey(s string) string {
+	h := md5.Sum([]byte(s))
+	return hex.EncodeToString(h[:])
+}
+
 const (
 	spotifyCacheTTLHit  int64 = 30 * 24 * 60 * 60 // 30 days for resolved track IDs
 	spotifyCacheTTLMiss int64 = 4 * 60 * 60       // 4 hours for misses (retry later)
@@ -25,29 +31,19 @@ type listenBrainzResult struct {
 	SpotifyTrackIDs []string `json:"spotify_track_ids"`
 }
 
-// buildSpotifySearchURL constructs a Spotify search URL using artist and title.
-// Used as the ultimate fallback when ListenBrainz resolution fails.
-func buildSpotifySearchURL(artist, title string) string {
-	query := strings.TrimSpace(strings.Join([]string{artist, title}, " "))
+// spotifySearchURL builds a Spotify search URL from one or more terms.
+// Empty terms are ignored. Returns "" if all terms are empty.
+func spotifySearchURL(terms ...string) string {
+	query := strings.TrimSpace(strings.Join(terms, " "))
 	if query == "" {
-		return "https://open.spotify.com/search/"
-	}
-	return fmt.Sprintf("https://open.spotify.com/search/%s", url.PathEscape(query))
-}
-
-// spotifySearch builds a Spotify search URL for a single search term.
-func spotifySearch(term string) string {
-	term = strings.TrimSpace(term)
-	if term == "" {
 		return ""
 	}
-	return "https://open.spotify.com/search/" + url.PathEscape(term)
+	return "https://open.spotify.com/search/" + url.PathEscape(query)
 }
 
 // spotifyCacheKey returns a deterministic cache key for a track's Spotify URL.
 func spotifyCacheKey(artist, title, album string) string {
-	h := md5.Sum([]byte(strings.ToLower(artist) + "\x00" + strings.ToLower(title) + "\x00" + strings.ToLower(album)))
-	return "spotify.url." + hex.EncodeToString(h[:8])
+	return "spotify.url." + hashKey(strings.ToLower(artist)+"\x00"+strings.ToLower(title)+"\x00"+strings.ToLower(album))
 }
 
 // trySpotifyFromMBID calls the ListenBrainz spotify-id-from-mbid endpoint.
@@ -158,7 +154,7 @@ func resolveSpotifyURL(track scrobbler.TrackInfo) string {
 	}
 
 	// 3. Fallback to search URL
-	searchURL := buildSpotifySearchURL(track.Artist, track.Title)
+	searchURL := spotifySearchURL(track.Artist, track.Title)
 	_ = host.CacheSetString(cacheKey, searchURL, spotifyCacheTTLMiss)
 	pdk.Log(pdk.LogInfo, fmt.Sprintf("Spotify resolution missed, falling back to search URL for %q - %q: %s", primary, track.Title, searchURL))
 	return searchURL

@@ -208,7 +208,6 @@ Resolved URLs are cached (30 days for direct track links, 4 hours for search fal
 | [rpc.go](rpc.go)                 | Discord gateway communication, WebSocket handling, activity management              |
 | [coverart.go](coverart.go)       | Artwork URL handling and optional uguu.se image hosting                             |
 | [manifest.json](manifest.json)   | Plugin metadata and permission declarations                                         |
-| [navidrome.webp](navidrome.webp) | Navidrome logo used as the album art overlay badge                                  |
 | [Makefile](Makefile)             | Build automation                                                                    |
 
 ## Building

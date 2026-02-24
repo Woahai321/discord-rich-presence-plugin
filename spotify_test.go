@@ -31,20 +31,15 @@ var _ = Describe("Spotify", func() {
 		)
 	})
 
-	Describe("buildSpotifySearchURL", func() {
+	Describe("spotifySearchURL", func() {
 		DescribeTable("constructs Spotify search URL",
-			func(artist, title, expectedSubstring string) {
-				url := buildSpotifySearchURL(artist, title)
-				Expect(url).To(HavePrefix("https://open.spotify.com/search/"))
-				if expectedSubstring != "" {
-					Expect(url).To(ContainSubstring(expectedSubstring))
-				}
+			func(expectedURL string, terms ...string) {
+				Expect(spotifySearchURL(terms...)).To(Equal(expectedURL))
 			},
-			Entry("artist and title", "Rick Astley", "Never Gonna Give You Up", "Rick%20Astley"),
-			Entry("another track", "Radiohead", "Karma Police", "Radiohead"),
-			Entry("empty artist", "", "Only Title", "Only%20Title"),
-			Entry("empty title", "Solo Artist", "", "Solo%20Artist"),
-			Entry("both empty", "", "", ""),
+			Entry("artist and title", "https://open.spotify.com/search/Rick%20Astley%20Never%20Gonna%20Give%20You%20Up", "Rick Astley", "Never Gonna Give You Up"),
+			Entry("single term", "https://open.spotify.com/search/Radiohead", "Radiohead"),
+			Entry("empty terms", "", "", ""),
+			Entry("one empty term", "https://open.spotify.com/search/Solo%20Artist", "Solo Artist", ""),
 		)
 	})
 

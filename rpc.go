@@ -6,8 +6,6 @@
 package main
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -22,6 +20,13 @@ const (
 	heartbeatOpCode = 1 // Heartbeat operation code
 	gateOpCode      = 2 // Identify operation code
 	presenceOpCode  = 3 // Presence update operation code
+)
+
+// Discord status_display_type values control how the activity name is shown.
+// Type 0 renders the name as-is; type 2 renders the name with a "Listening to" prefix.
+const (
+	statusDisplayDefault   = 0 // Show activity name as-is (e.g. track title)
+	statusDisplayListening = 2 // Show "Listening to <name>" (used for "Navidrome")
 )
 
 const heartbeatInterval = 41 // Heartbeat interval in seconds
@@ -132,8 +137,7 @@ func (r *discordRPC) processImage(imageURL, clientID, token string, ttl int64) (
 	}
 
 	// Check cache first
-	h := md5.Sum([]byte(imageURL))
-	cacheKey := "discord.image." + hex.EncodeToString(h[:8])
+	cacheKey := "discord.image." + hashKey(imageURL)
 	cachedValue, exists, err := host.CacheGetString(cacheKey)
 	if err == nil && exists {
 		pdk.Log(pdk.LogDebug, fmt.Sprintf("Cache hit for image URL: %s", imageURL))
